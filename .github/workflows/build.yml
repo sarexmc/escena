@@ -1,0 +1,74 @@
+name: Build mod (Fabric 1.21.1)
+ 
+# Los videos se descargan del release "assets-videos" (sube ahi los 6 .mp4 o el zip),
+# o se leen de la carpeta videos/ si los pones en el repo.
+# Al subir un tag v1.0.0 el .jar compilado se publica en Releases.
+ 
+on:
+  push:
+    branches: [main, master]
+    tags: ['v[0-9]*']
+  pull_request:
+  workflow_dispatch:
+ 
+permissions:
+  contents: write
+ 
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+ 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+ 
+      - name: Instalar ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+ 
+      - name: Obtener videos
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p videos
+          NAMES="eon_y_su_padre guardian phora_ruleta reviil_caida dialogo_jefe ruleta_final"
+          missing() { for n in $NAMES; do [ -f "videos/$n.mp4" ] || return 0; done; return 1; }
+          if missing; then
+            echo "Faltan videos en el repo: los descargo del release 'assets-videos'..."
+            gh release download assets-videos --repo "$GITHUB_REPOSITORY" --dir videos --clobber || true
+            for z in videos/*.zip; do [ -f "$z" ] && unzip -o -j "$z" -d videos; done || true
+          fi
+          for n in $NAMES; do
+            if [ ! -f "videos/$n.mp4" ]; then
+              echo "::error::Falta $n.mp4. Crea y PUBLICA un release con tag 'assets-videos' y sube ahi los 6 mp4 (o el zip)."
+              ls -la videos || true
+              exit 1
+            fi
+          done
+ 
+      - name: Generar assets (fotogramas + audio)
+        run: python3 tools/build_assets.py videos
+ 
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+ 
+      - name: Compilar
+        run: gradle build --no-daemon
+ 
+      - name: Mostrar jars generados
+        run: ls -la build/libs
+ 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sarexstudio-cinematics-fabric
+          path: build/libs/sarexstudio-cinematics-1.0.0.jar
+          compression-level: 0
+ 
+      - name: Publicar en Releases (solo con tag vX.Y.Z)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/libs/sarexstudio-cinematics-1.0.0.jar
