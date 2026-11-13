@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "sarexstudio",
+  "version": "${version}",
+  "name": "Sarex Studio Cinematics",
+  "description": "Reproduce cinematicas a pantalla completa con /sarexstudio escena <nombre>. Todo va dentro del mod.",
+  "authors": ["Sarex Studio"],
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.sarexstudio.cinematics.SarexStudio"],
+    "client": ["com.sarexstudio.cinematics.client.SarexStudioClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
